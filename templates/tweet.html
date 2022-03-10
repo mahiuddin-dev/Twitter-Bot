@@ -1,0 +1,174 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block post %}active{% endblock post %}
+{% block style %}
+<link rel="stylesheet" href="https://code.jquery.com/ui/1.13.0/themes/base/jquery-ui.css">
+<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/timepicker/1.3.5/jquery.timepicker.min.css">
+{% endblock style %}
+{% block mainbody %}
+<main>
+    <div class="container-fluid px-4">
+      <h1 class="mt-4">Tweet Post</h1>
+      <ol class="breadcrumb mb-4">
+        <li class="breadcrumb-item active">Tweet Post</li>
+      </ol>
+
+   
+      <div class="mb-4">
+        <form class="" action="/" method="post">
+            {% csrf_token %}
+            
+            <div class="mb-3">
+              <label for="validationTextarea" class="form-label">Write Your Tweet</label>
+              <textarea name="tweetpostbox" minlength='1' maxlength="140" class="form-control tweetpost" id="validationTextarea" placeholder="type your tweet here..." required></textarea>
+              <div class="invalid-feedback">
+                Please enter a message in the textarea.
+              </div>
+            </div>
+
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" role="switch" id="flexSwitchCheckChecked">
+              <label class="form-check-label" for="flexSwitchCheckChecked">Schedule Post </label>
+            </div>
+
+            <!-- date picker -->
+            <div class="mb-3" id="datepickerid">
+              <label for="datepicker" class="form-label">Select Date</label>
+              <input type="text" id="datepicker">
+              
+              <div class="invalid-feedback">
+                Please enter a message in the textarea.
+              </div>
+
+            </div>
+            <!-- end date picker -->
+
+            <!-- time picker -->
+            <div class="mb-3" id="timepickerid">
+              <label for="timepicker" class="form-label">Select Time</label>
+              <input type="text" id="timepicker">
+              
+              <div class="invalid-feedback">
+                Please enter a message in the textarea.
+              </div>
+            </div>
+            <!-- end time picker -->
+          
+            <div class="mb-3">
+              <button name="tweetPostForm" class="btn btn-primary float-end" type="submit">Post Tweet</button>
+            </div>
+          </form>
+      </div>
+    </div>
+  </main>
+{% endblock mainbody %}
+{% block scripts %}
+<script src="https://code.jquery.com/jquery-3.6.0.js"></script>
+<script src="https://code.jquery.com/ui/1.13.1/jquery-ui.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/timepicker/1.3.5/jquery.timepicker.min.js"></script>
+
+
+  <script type="text/javascript">
+
+    $(document).ready(function() {
+
+      var dateToday = new Date(); 
+
+      $( "#datepicker" ).datepicker({
+          showButtonPanel: true,
+          minDate: dateToday
+      });
+
+      $("#datepickerid").hide();
+      $("#timepickerid").hide();
+
+      $("#flexSwitchCheckChecked").change(function(){
+        if($(this).prop("checked") == true){
+          $("#datepickerid").show();
+          $("#timepickerid").show();
+
+          // select date but disabled to change date 
+          // $("#datepicker").prop('disabled', true);
+
+          // set atr at datepicker and Timepicker
+          $("#datepicker").attr("required", "required");
+          $("#timepicker").attr("required", "required");
+        }
+        else if($(this).prop("checked") == false){
+          $("#datepickerid").hide();
+          $("#timepickerid").hide();
+
+          // reset the datepicker
+          $("#datepicker").val("");
+          $("#timepicker").val("");
+
+          // remove atr at datepicker and Timepicker
+          $("#datepicker").removeAttr("required");
+          $("#timepicker").removeAttr("required");
+        }
+      });
+
+      GetDate()
+      
+    });
+
+
+    // Timepicker function 
+    function Timepicker() {
+      $('#timepicker').timepicker({
+             timeFormat: 'h:mm p',
+             interval: 15,
+             dynamic: true,
+             dropdown: true,
+             scrollbar: true,
+        });
+    }
+
+    function GetDate(){
+      // if datepicker change then timepicker will change
+      $("#datepicker").change(function(){
+        var inputDate = $(this).val();
+        var newDate = new Date();
+
+        const options = {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+        }
+        date = new Intl.DateTimeFormat('en-US', options).format(newDate) 
+          
+        // Check inputDate and date is mach or not
+        Timepicker();
+        $('#timepicker').timepicker('option', 'minTime',getCurrentTime(newDate));
+        if(inputDate == date){
+          Timepicker();
+          $('#timepicker').timepicker('option', 'minTime',getCurrentTime(newDate));
+          console.log(1);
+        }
+        else{
+          // remove and add minTime in Timepicker
+          $('#timepicker').timepicker('option', 'minTime','12:00 AM');
+          console.log(2);
+        }
+
+      });
+    }
+
+    function getCurrentTime(date) {
+        // var date = new Date();
+         var hours = date.getHours()
+         minutes = date.getMinutes(),
+         ampm = hours >= 12 ? 'pm' : 'am';
+
+        hours = hours % 12;
+        hours = hours ? hours : 12; // the hour '0' should be '12'
+        minutes = minutes < 10 ? '0'+minutes : minutes;
+        return hours + ':' + minutes + ' ' + ampm;
+  }
+
+
+
+
+  </script>
+
+{% endblock scripts %}
