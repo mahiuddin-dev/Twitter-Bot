@@ -13,9 +13,21 @@
         <li class="breadcrumb-item active">Tweet Post</li>
       </ol>
 
-   
+      {% if success == 1  %}
+      <p class="mt-2 text-success"> Post successfully </p>
+      {% elif success == 2 %}
+      <p class="mt-2 text-danger"> Tweet must be 1-140 words </p>
+      {% elif success == 0 %}
+      <p class="mt-2 text-danger"> Something Wrong! Try again </p>
+      {% elif success == 4 %}
+      <p class="mt-2 text-Info"> Post successfully Schedule</p>
+      {% elif success == 5 %}
+      <p class="mt-2 text-warning"> Post Duplicate</p>
+      {% endif %}
+
+
       <div class="mb-4">
-        <form class="" action="/" method="post">
+        <form class="" action="{% url 'Home:tweet' %}" method="post">
             {% csrf_token %}
             
             <div class="mb-3">
@@ -27,14 +39,14 @@
             </div>
 
             <div class="form-check form-switch">
-              <input class="form-check-input" type="checkbox" role="switch" id="flexSwitchCheckChecked">
+              <input name="checkbox" class="form-check-input" type="checkbox" role="switch" id="flexSwitchCheckChecked">
               <label class="form-check-label" for="flexSwitchCheckChecked">Schedule Post </label>
             </div>
 
             <!-- date picker -->
             <div class="mb-3" id="datepickerid">
               <label for="datepicker" class="form-label">Select Date</label>
-              <input type="text" id="datepicker">
+              <input name="date" type="text" id="datepicker">
               
               <div class="invalid-feedback">
                 Please enter a message in the textarea.
@@ -46,7 +58,7 @@
             <!-- time picker -->
             <div class="mb-3" id="timepickerid">
               <label for="timepicker" class="form-label">Select Time</label>
-              <input type="text" id="timepicker">
+              <input name="timepic" type="text" id="timepicker">
               
               <div class="invalid-feedback">
                 Please enter a message in the textarea.
@@ -166,9 +178,7 @@
         return hours + ':' + minutes + ' ' + ampm;
   }
 
-
-
-
   </script>
 
 {% endblock scripts %}
+

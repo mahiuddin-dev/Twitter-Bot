@@ -8,4 +8,6 @@ app_name = 'Home'
 urlpatterns = [
     path('', views.index, name='index'),
     path('tweet/', views.tweet, name='tweet'),
+    path('follow/', views.follow, name='follow'),
+    path('followback/', views.followback, name='followback'),
 ]

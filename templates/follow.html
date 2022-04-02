@@ -1,0 +1,81 @@
+{% extends 'base.html' %}
+{% block title %}Follow User{% endblock title %}
+{% block style %}{% endblock style %}
+{% block follow %}active{% endblock follow %}
+
+{% block mainbody %}
+<main>
+    <div class="container-fluid px-4">
+
+      {% if success == 1  %}
+      <p class="mt-2 text-success"> Follow successfully </p>
+      {% elif success == 0 %}
+      <p class="mt-2 text-danger"> Something Wrong! Try again </p>
+      {% endif %}
+
+
+      <div class="mb-4">
+
+        <form class="d-none d-md-inline-block form-inline ms-auto me-0 me-md-3 my-2 my-md-0" method="POST">
+            {% csrf_token %}
+        <div class="input-group">
+          <input
+            class="form-control"
+            name="username"
+            type="text"
+            placeholder="Search for..."
+            aria-label="Search for..."
+          />
+          <button name="usernameSearch" class="btn btn-primary"  type="submit">
+            <i class="fas fa-search"></i>
+          </button>
+        </div>
+      </form>
+          <!-- follow user div -->
+            <div class="card mb-4 mt-4">
+                <div class="card-header">
+                <i class="fas fa-table mr-1"></i>
+                Follow User
+                </div>
+                <h4 class="mt-1 mb-1"> {% if username %}
+                    Followers of <b>{{ username }}</b>
+                {% endif %}</h4>
+                <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
+                    <thead>
+                        <tr>
+                        <th>Name</th>
+                        <th>User Name</th>
+                        <th>Follow</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in followers_name %}
+                        <tr>
+                        <td>{{ user.name }}</td>
+                        <td>{{ user.screen_name }}</td>
+                        <td>
+                            <form  method="POST">
+                                {% csrf_token %}
+                            <input type="hidden" name="user_id" value="{{ user.id }}">
+                            <input type="hidden" name="username" value="{{ username }}">
+                            <input type="hidden" name="user" value="{{ user.name }}">
+                            <input type="hidden" name="screen_name" 
+                            value="{{ user.screen_name }}">
+                            <button name="FollowUser" type="submit" class="btn btn-primary">Follow</button>
+                            </form>
+                        </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    </table>
+                </div>
+                </div>
+          
+
+    
+      </div>
+    </div>
+  </main>
+{% endblock mainbody %}

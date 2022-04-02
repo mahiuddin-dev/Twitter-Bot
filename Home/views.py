@@ -1,10 +1,10 @@
 from django.shortcuts import render
 import tweepy
 import time
-import webbrowser
 import itertools
 import threading
 from decouple import config
+from .models import TweetPost,Following
 
 # Create your views here.
 
@@ -19,91 +19,178 @@ def get_twitter_api():
 def index(request):
    
    api = get_twitter_api()
+   user = api.verify_credentials() 
 
-   # Post method views
-   if request.method == 'POST' and 'tweetPost' in request.POST:
-      tweet = request.POST['tweet']
-      success = 1
-      if len(tweet) == 0 or len(tweet) > 140:
-             success = 2
-             return render(request, 'index.html', {'success': success})
-      else:      
-         try:
-            api.update_status(tweet)
-            success = 1
-            return render(request, 'index.html', {'success': success})
-         except tweepy.errors.TweepError as error:
-            success = 0
-            if error.api_code == 187:
-               return render(request, 'index.html', {'success': success})
-            else:
-               raise error
-   
-      #  Get user
-   if request.method == 'POST' and 'userSearch' in request.POST:
-      user = request.POST['user']
-      user_obj = api.get_user(screen_name=user)
-      FollowingStatus = False
-      if user_obj.following == True:
-         return render(request, 'index.html', {'isFollwer': True, 'name':user})
-      else:
-         try:
-            api.create_friendship(screen_name=user_obj.screen_name)
-            FollowingStatus = True
-            return render(request, 'index.html', {'FollowingStatus': FollowingStatus,'name':user})
-         except  tweepy.errors.TweepyException as error:
-            return render(request, 'index.html', {'FollowingStatusError': error})
-   
-   if request.method == 'POST' and 'DontFollowBack' in request.POST:
-      user = api.verify_credentials()
+   if user:
+      username = user.name
+    
+      if request.method == 'POST' and 'DontFollowBack' in request.POST:
+         user = api.verify_credentials()
+         
+         dont_follow_back = DontFollowBack(user.screen_name)
       
-      dont_follow_back = DontFollowBack(user.screen_name)
-     
-      return render(request, 'index.html',{'dont_follow_back':dont_follow_back, 'countOfFollower' :len(dont_follow_back)})
+         return render(request, 'index.html',{'dont_follow_back':dont_follow_back, 'countOfFollower' :len(dont_follow_back)})
+
+      if request.method == 'POST' and 'unfollow' in request.POST:
+         alluser = request.POST.getlist('userDontFollow')
+         threads = []
+
+         for user in alluser:
+            try:
+               t = threading.Thread(target=Sleep5Sec)
+               t.start()
+               threads.append(t)
+               api.destroy_friendship(screen_name=user)
+            except tweepy.errors.TweepyException as error:
+               if error.api_code == 162:
+                  print('already unfollowed')
+               else:
+                  raise error
+
+         for thread in threads:
+            thread.join()
+
+         finish = time.perf_counter()
+         print(finish)
    
-   if request.method == 'POST' and 'usernameSearch' in request.POST:
-      username = request.POST['username']
+   else:
+         print("Authentication failed")
+   
 
-      return render(request, 'index.html',{'Followers':''})
+   context ={'success':0,'username':username}
 
-
-   if request.method == 'POST' and 'unfollow' in request.POST:
-      alluser = request.POST.getlist('userDontFollow')
-      threads = []
-
-      for user in alluser:
-         try:
-            t = threading.Thread(target=Sleep5Sec)
-            t.start()
-            threads.append(t)
-            api.destroy_friendship(screen_name=user)
-         except tweepy.errors.TweepyException as error:
-            if error.api_code == 162:
-               print('already unfollowed')
-            else:
-               raise error
-
-      for thread in threads:
-         thread.join()
-
-      finish = time.perf_counter()
-      print(finish)
-  
-  
-  
-   return render(request, 'index.html', {'success': ''})
+   return render(request, 'index.html', context)
 
 
 def tweet(request):
-
+   api = get_twitter_api()
    # Post method views
    if request.method == 'POST' and 'tweetPostForm' in request.POST:
       tweetpost = request.POST['tweetpostbox']
+      check_values = request.POST.getlist('checkbox')
 
-      print(tweetpost)
+      # Checkbox value
+      if len(check_values) == 0:
+         success = 1
+         if len(tweetpost) == 0 or len(tweetpost) > 140:
+               success = 2
+               return render(request, 'tweet.html', {'success': success})
+         else:      
+            try:
+               api.update_status(tweetpost)
+               success = 1
+               # Set value in database
+               tweetpost = TweetPost(tweet=tweetpost,post_done=True)
+               tweetpost.save()
+               return render(request, 'tweet.html', {'success': success})
+            except tweepy.errors.Forbidden as error:
+               if 187 in error.api_codes:
+                  success = 5
+                  return render(request, 'tweet.html', {'success': success})
+               else:
+                  success = 4
+                  return render(request, 'tweet.html', {'success': success})
+
+      else:
+         date = request.POST['date']
+         time = request.POST['timepic']
+         
+         #Format date
+         date = date.split('/')
+         date = date[2] + '-' + date[0] + '-' + date[1]
+
+         # Set value in database
+         tweetpost = TweetPost(tweet=tweetpost,schedule_post=True, schedule_date=date, schedule_time=time)   
+         tweetpost.save()
+         success = 4
+         return render(request, 'tweet.html', {'success': success})
 
    return render(request, 'tweet.html')
 
+def follow(request):
+
+   if request.method == 'POST' and 'usernameSearch' in request.POST:
+      username = request.POST['username']
+      followers = FollowUser(username)
+
+      return render(request, 'follow.html', {'followers_name': followers,'username':username})
+
+   if request.method == 'POST' and 'FollowUser' in request.POST:
+      user_id = request.POST['user_id']
+      username = request.POST['username']
+      user = request.POST['user']
+      screen_name = request.POST['screen_name']
+      api = get_twitter_api()
+      try:
+         api.create_friendship(user_id=user_id)
+         following = Following.objects.create(user=user,username=screen_name,user_id=user_id)
+         following.save()
+         success = 1
+         followers = FollowUser(username)
+         t = threading.Thread(target=Sleep5Sec)
+         t.start()
+         return render(request, 'follow.html', {'success': success,'followers_name': followers,'username':username})
+
+      except tweepy.errors.Forbidden as error:
+         if 187 in error.api_codes:
+            success = 5
+            return render(request, 'follow.html', {'success': success})
+         else:
+            success = 0
+            return render(request, 'follow.html', {'success': success})
+
+   return render(request, 'follow.html',)
+
+def followback(request):
+   follow_user = Following.objects.filter(followback=False)
+   api = get_twitter_api()
+   follower_id  = api.get_follower_ids()
+  
+   for user in follow_user:
+      if user.user_id in follower_id:
+         user.followback = True
+         user.save()
+
+   follow_back = Following.objects.filter(followback=False).order_by('-id')
+
+
+   if request.method == 'POST' and 'UnFollowUser' in request.POST:
+      user_id = request.POST['user_id']
+
+      try:
+         api.destroy_friendship(user_id=user_id)
+         Following.objects.filter(user_id=user_id).delete()
+         success = 1
+         follow_back = Following.objects.filter(followback=False).order_by('-id')
+         return render(request, 'followback.html', {'success': success,'dont_follow_back':follow_back})
+      except tweepy.errors.Forbidden as error:
+         if 187 in error.api_codes:
+            success = 5
+            return render(request, 'followback.html', {'success': success,'dont_follow_back':follow_back})
+         else:
+            success = 0
+            return render(request, 'followback.html', {'success': success,'dont_follow_back':follow_back})
+
+   return render(request, 'followback.html',{'dont_follow_back':follow_back})
+
+
+def FollowUser(username):
+   api = get_twitter_api()
+   followers = api.get_followers(screen_name=username,count=200) 
+   user = api.verify_credentials() 
+   followers_name = []
+   if user:
+      for user_obj in followers:
+         if user_obj.following == False and user_obj.screen_name != user.screen_name:
+            friends_count = user_obj.friends_count
+            followers_count = user_obj.followers_count
+            count = abs(followers_count-friends_count)
+
+            if friends_count > 100 and followers_count > 100 and count <= 500:
+               followers_name.append(user_obj)
+               if len(followers_name) == 10:
+                  break
+      return followers_name
 
 def Sleep5Sec():
    time.sleep(5)
@@ -235,3 +322,20 @@ def DontFollowBackUserName(dontFollow_id):
 
 
    # client = tweepy.Client(bearer_token=config('bearer_token'), consumer_key=config('api_key'), consumer_secret=config('api_secret'), access_token=config('access_token'), access_token_secret=config('access_token_secret'), wait_on_rate_limit=True)
+
+
+   #  if request.method == 'POST' and 'userSearch' in request.POST:
+   #    user = request.POST['user']
+   #    api = get_twitter_api()
+   #    user_obj = api.get_user(screen_name=user)
+   #    FollowingStatus = False
+   #    if user_obj.following == True:
+   #       return render(request, 'follow.html', {'isFollwer': True, 'name':user})
+   #    else:
+   #       try:
+   #          api.create_friendship(screen_name=user_obj.screen_name)
+   #          FollowingStatus = True
+   #          return render(request, 'follow.html', {'FollowingStatus': FollowingStatus,'name':user})
+   #       except  tweepy.errors.TweepyException as error:
+   #          return render(request, 'follow.html', {'FollowingStatusError': error})
+       
